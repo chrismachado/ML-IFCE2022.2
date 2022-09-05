@@ -1,58 +1,63 @@
-import torch
-from util.Statistics import Statistics
+import numpy as np
+import matplotlib.pyplot as plt
+from util.metrics import confusion_matrix
+import seaborn as sns
 
 
-class PlotDecisionBoundary:
-    def __init__(self, x_test, y_test, x_train, y_train, attr=None):
-        self.x_test = x_test
-        self.y_test = y_test
-        self.x_train = x_train
-        self.y_train = y_train
+def plot_decision_boundary(clf, x, target, fig=None):
+    if not x.shape[1] == 2:
+        raise Exception("Samples dimensions should be 2.")
 
-        if attr is None or len(attr) != 2:
-            raise Exception("Only two attributes are allowed.")
-        self.attr = attr
+    surface = __x_surface_01()
+    classified_surface = clf.predict(surface)
 
-        samples = torch.cat((x_train, x_test), dim=0)
+    plt.scatter(surface[:, 0], surface[:, 1], c=classified_surface, cmap=plt.cm.RdYlBu, alpha=.25)
+    plt.scatter(x[:, 0], x[:, 1], c=target, cmap=plt.cm.RdYlBu)
 
-        self.x1, self.x2 = torch.meshgrid([
-            torch.arange(torch.min(samples[:, attr[0]]), torch.max(samples[:, attr[0]]), 0.0025),
-            torch.arange(torch.min(samples[:, attr[1]]), torch.max(samples[:, attr[1]]), 0.0025)
-        ], indexing='xy')
+    plt.title(clf)
+    plt.xlabel('x0')
+    plt.ylabel('x1')
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
 
-        self.x1 = self.x1.reshape(self.x1.shape[0] * self.x1.shape[1])
-        self.x2 = self.x2.reshape(self.x2.shape[0] * self.x2.shape[1])
+    if fig is not None:
+        fig.axes.append(plt.plot)
 
-        p = []
-        for e in zip(self.x1, self.x2):
-            p.append(torch.tensor([e[0], e[1]]).tolist())
-        self.p = torch.tensor(p, dtype=float)
+    plt.show()
 
-    def plot_decision_boundary(self, plt,  clf, **kwargs):
-        if clf.__name__ == 'KNN':
-            if 'k' not in kwargs.keys():
-                raise KeyError("Missing K value to run KNN.")
-            _clf = self._plot_knn(clf, kwargs['k'])
-        elif clf.__name__ == 'NCC':
-            _clf = self._plot_ncc(clf)
-        else:
-            raise Exception("clf should be a valid classifier.")
 
-        _p_targets = _clf.predict(self.p)
+def __x_surface_01():
+    x1, x2 = np.meshgrid(np.arange(0, 1, 0.0125),
+                         np.arange(0, 1, 0.0125),
+                         indexing='xy')
+    x1 = x1.reshape((x1.shape[0] * x1.shape[1],))
+    x2 = x2.reshape((x2.shape[0] * x2.shape[1],))
 
-        ssLabel = "hit = %d%%" % (Statistics().hit_rate(_clf.predict(self.x_test[:, self.attr]), self.y_test) * 100)
-        #
-        plt.xlabel('x1')
-        plt.ylabel('x2')
-        plt.scatter(self.x1, self.x2, c=_p_targets, cmap='binary')
-        plt.scatter(self.x_test[:, self.attr[0]], self.x_test[:, self.attr[1]], c=self.y_test, cmap='cool')
-        plt.annotate(ssLabel, fontsize=12, xy=(0.05, 0.9), xycoords='axes fraction',
-                     bbox=dict(boxstyle="round", fc=(1, .8, 0.6), ec="none"))
+    _surface = []
 
-        return plt
+    for p in zip(x1, x2):
+        _surface.append([p[0], p[1]])
 
-    def _plot_knn(self, clf, k):
-        return clf(k, self.x_train[:, self.attr], self.y_train)
+    return np.array(_surface)
 
-    def _plot_ncc(self, clf):
-        return clf(self.x_train[:, self.attr], self.y_train)
+
+def plot_confusion_matrix(clf, x, targets):
+    predicted = clf.predict(x)
+    cfs_matrix = confusion_matrix(targets=targets, predicted=predicted, n_cls=clf.n_cls)
+
+    ax = sns.heatmap(cfs_matrix, annot=True, cmap='Blues')
+    ax.set_title(clf)
+    ax.set_xlabel('Predicted values')
+    ax.set_ylabel('Actual values')
+
+    plt.show()
+
+
+def plot_bar_std(std, values):
+    plt.bar(values, std, color='maroon', width=.4)
+
+    plt.xlabel('Standard Deviation')
+    plt.ylabel('Values')
+    plt.title('Standard Deviation')
+    plt.show()
+
