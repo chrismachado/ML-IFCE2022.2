@@ -11,19 +11,3 @@ def euclidian_distance(x1, x2):
 
     return np.array(cdist).reshape((x1.shape[0], x2.shape[0]))
 
-
-def normalize(x):
-    _max = x.max()
-    _min = x.min()
-
-    z = (x - _min) / (_max - _min)
-
-    return z
-
-
-if __name__ == '__main__':
-    import numpy as np
-    x1 = np.random.rand(4, 2)
-    x2 = np.random.rand(3, 2)
-
-    print(euclidian_distance(x2, x1))
